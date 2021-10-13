@@ -6,11 +6,12 @@ const GlobalxOffset = 1;
 var canvas;
 var ctx;
 
-var maxNumOfRoots = 10;
-var maxGenerativeBends = 20;
+var maxNumOfRoots = 1;
+var maxGenerativeBends = 4;
 var maxGenerativeRootLength = 200;
 var minGenerativeRootLength = 20;
 
+const PPF = 2; //points moved per frame
 
 function init(){
     console.log('init');
@@ -40,10 +41,11 @@ function init(){
         [150, 120]
     ]
 
-    var randRooter = getRandomInt(maxNumOfRoots);
+    var randRooter = getRandomArbitrary(1, maxNumOfRoots);
     for(var i = 0 ; i < randRooter; i++){
         var randRoots = GenerateRootStructure();
-        
+        console.log('randRoots');
+        console.log(randRoots);
         Rootify(randRoots);
 
     }
@@ -85,7 +87,7 @@ function GenerateRootStructure(){
         firstEntry = [x, y];
     }
 
-    var numOfBends = getRandomInt(maxGenerativeBends);
+    var numOfBends = getRandomArbitrary(1, maxGenerativeBends);
     var points = [];
     var lastDirection = null;
     for(var i = 0; i < numOfBends; i++){
@@ -153,10 +155,12 @@ function GenerateRootStructure(){
 }
 
 function Rootify(necessaryPoints){
-    DrawRoot(necessaryPoints, backgroundColor, GlobalxOffset, GlobalyOffset);
-    DrawRoot(necessaryPoints, foregroundColor, 0, 0);
+    //DrawRoot(necessaryPoints, backgroundColor, GlobalxOffset, GlobalyOffset);
+    //DrawRoot(necessaryPoints, foregroundColor, 0, 0);
+    DrawRootAnim(necessaryPoints, foregroundColor, 0, 0);
 
 }
+
 
 function DrawRoot(necessaryPoints, color, xOffset, yOffset)
 {
@@ -180,6 +184,115 @@ function DrawRoot(necessaryPoints, color, xOffset, yOffset)
     //cap root
     ctx.stroke();
 }
+
+
+function AnimateRoot(coords, nextCoords, color, xOffset, yOffset, waypoints, t){
+
+    
+    ctx.lineWidth = width
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+
+    var lastpts = waypoints[t-1];
+    var nextpts = waypoints[t];
+    ctx.moveTo(lastpts[0]+ xOffset, lastpts[1]+ yOffset);
+    ctx.lineTo(nextpts[0] + xOffset, nextpts[1] + yOffset);
+    //cap root
+    ctx.stroke();
+    t++;
+
+    
+    console.log('animating along waypoints. t == ' + t);
+    console.log(waypoints);
+    console.log(t<waypoints.length);
+    if(t<waypoints.length){ 
+        requestAnimationFrame(() => {this.AnimateRoot(coords, nextCoords, color, xOffset, yOffset, waypoints, t) }); 
+    }else{
+        return true;
+    }
+}
+
+function GetPointsBetweenCoords(coords, nextCoords){
+    /*
+    console.log('');
+    console.log('');
+    console.log('');
+    console.log('____________________________________________');
+    console.log('coords & next coords');
+    console.log(coords);
+    console.log(nextCoords);
+    */
+    var distanceX = nextCoords[0] - coords[0];
+    var distanceY = nextCoords[1] - coords[1];
+    var waypoints = [];
+    /*
+    console.log('distances');
+    console.log(distanceX,distanceY);
+    */
+    //determine how long its gonna take for us to travel a distance
+    //moving at x points per frame (PPF)
+    var numFramesX = distanceX / PPF;
+    var numFramesY = distanceY / PPF;
+    var numFrames = 0;
+    //get num frames by getting the highest absolute value of the two
+    numFrames = Math.max(Math.abs(numFramesX), Math.abs(numFramesY))
+    /*
+    if(Math.abs(numFramesX) == Math.max(Math.abs(numFramesX), Math.abs(numFramesY)))
+        numFrames = numFramesX;
+    else
+        numFrames = numFramesY;
+    */
+   /*
+    console.log('all num frame info');
+    console.log({numFramesX, numFramesY, numFrames});
+    */
+    for(var i = 0; i < numFrames; i++){
+        var x = coords[0] + distanceX * i / numFrames;
+        var y = coords[1] + distanceY * i / numFrames;
+        waypoints.push([x,y]);
+    }
+    /*
+    console.log('waypoints');
+    console.log(waypoints);
+    console.log('____________________________________________');
+    console.log('');
+    console.log('');
+    console.log('');
+    */
+
+    return waypoints;
+}
+
+function DrawRootAnim(necessaryPoints, color, xOffset, yOffset)
+{
+
+    for(var i = 0; i < necessaryPoints.length; i++){
+        var coords = necessaryPoints[i];
+        var nextCoords = necessaryPoints[i+1]
+
+        var waypoints = [];
+        if( coords && nextCoords)
+            waypoints = GetPointsBetweenCoords(coords, nextCoords);
+        var isDone = false;
+        if(waypoints.length >= 1){
+            isDone = AnimateRoot(coords, nextCoords, color, xOffset, yOffset, waypoints, 1);
+        }else{
+            isDone = false;
+        }
+        /*
+        if(i == 0){
+            ctx.moveTo(coords[0] + xOffset, coords[1] + yOffset)
+        }
+        if(i+1 < necessaryPoints.length){
+            ctx.lineTo(nextCoords[0] + xOffset, nextCoords[1] + yOffset)
+
+        }
+        */
+    }
+
+}
+
 
 
 init();
